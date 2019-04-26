@@ -11,7 +11,24 @@ from fxUtil import *
 class Stream:
 	# Class variable that keeps track of the number of connections
 	CURRENT_PORT_ID = 0
+	MAX_NUM_ATTEMPTS = 5
+	class StreamError(Exception):
+		""" Base class for the rest of stream errors"""
+		def __init__(self, message):
+			self.message = message
+
+	class NoConnection(StreamError):
+		"""Failed to connect to device"""
+		pass
 	
+	class StreamingFailed(StreamError):
+		"""Streaming was unsable to start"""
+		pass
+		
+	class RequestedFieldsError(StreamError):
+		"""Port is not accesible"""
+		pass
+		
 	def __init__(self,port, varsToStream, printingRate = 10,labels = None,updateFreq = 100, shouldLog = False, shouldAuto = 1):
 		""" Intializes stream and printer """
 		#init printer settings
@@ -36,7 +53,7 @@ class Stream:
 		# Start stream
 		fxSetStreamVariables(self.devId,self.varsToStream)
 		if not fxStartStreaming(self.devId,self.updateFreq,self.shouldLog,self.shouldAuto):
-			raise Exception('Streaming failed')
+			raise Stream.StreamingFailed('Streaming failed over port {}'.format(port))
 		else:
 			sleep(0.4)
 
@@ -50,22 +67,33 @@ class Stream:
 			timeElapsed += 0.2
 
 		if(not fxIsOpen(self.port)):
-			raise Exception("Couldn't connect to port {}".format(port))
+			raise Stream.NoConnection("Couldn't connect to port {}".format(port))
 		
 		sleep(0.1)
-		MAX_DEVICE_ID_ATTEMPTS = 10
 		num_attempts = 0
 		devIds = fxGetDeviceIds()
-		while(num_attempts < MAX_DEVICE_ID_ATTEMPTS and len(devIds) == 0):
+		while(num_attempts < Stream.MAX_NUM_ATTEMPTS and len(devIds) == 0):
 			sleep(0.2)
 			devIds = fxGetDeviceIds()
 		
 		if len(devIds) == 0:
-			raise Exception('Failed to get device Id')
-		devId = devIds[self.port]
-		print("Devid is: ", devId)
-		return devId
-
+			raise Stream.NoConnection('Failed to get device Id')
+		self.devId = devIds[self.port]
+	
+	def _establishConnection(self,port):
+		for attempt in range(Stream.MAX_NUM_ATTEMPTS):
+			try:
+				self._connectToDevice(port)
+				if(all([elem == None for elem in fxReadDevice(self.devId, self.varsToStream)])):
+					raise Stream.RequestedFieldsError("Requested fields error".format(port))
+			except Stream.NoConnection as e:
+				closePort(self.port)
+				raise Stream.NoConnection(e.message)
+			except Stream.RequestedFieldsError as e:
+				fxStopStreaming(self.devId)
+				closePort(self.port)
+				if attempt == 4:
+					raise Stream.RequestedFieldsError(e.message)
 
 	def writeToCSV(self):
 		with open(self.fileName,'a') as fd:
