@@ -88,18 +88,7 @@ def fxCurrentControl(devId):
 	print("Time: {}".format(currentTime - startTime))
 	print("Valid reads:  {}".format(validReads))
 	print("None reads:  {}".format(noneReads))
-	print("Average execution frequency: {}".format(float(i)/(currentTime - startTime))  )
-
-
-
-
-
-	print('Turning off current control...')
-
-	print("Time: {}".format(currentTime - startTime))
-	print("i:  {}".format(i))
-	print("Average execution frequency: {}".format(float(i)/(currentTime - startTime))  )
-
+	print("Average execution frequency: {}".format(float(validReads)/(currentTime - startTime))  )
 	# ramp down first
 	n = 50
 	for i in range(0, n):
@@ -121,9 +110,8 @@ def fxCurrentControl(devId):
 	#lag = (len(correlatedSignal)/2) - np.argmax(correlatedSignal)
 	#c_sig = np.roll(b_sig, shift=int(np.ceil(lag)))
 	#print("Lag is ", lag, " ticks")
-	dataMatrix = dataMatrix.transpose()
-	plt.plot(dataMatrix)
-	print(5/i)
+	plt.plot(dataMatrix.transpose())
+	print(5/validReads)
 	plt.xlabel("Time in ticks")
 	plt.ylabel("Current in mA")
 	
