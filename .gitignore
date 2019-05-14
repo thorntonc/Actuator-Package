@@ -3,4 +3,5 @@ __pycache__
 *.pyc
 *.project
 *.csv
+*.png
 test_scripts/build/

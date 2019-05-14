@@ -1,6 +1,6 @@
 import os, sys
 from time import sleep
-from time import time, strftime, process_time,perf_counter
+from time import time, strftime,perf_counter, sleep
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import correlate
@@ -12,10 +12,6 @@ from flexseapython.pyFlexsea import *
 from flexseapython.pyFlexsea_def import *
 from flexseapython.fxUtil import *
 
-
-#conversion factors
-degToCount = 45.5111 
-countToDeg = 1/degToCount
 
 labels = ["State time", 											\
 "accel x", "accel y", "accel z", "gyro x", "gyro y", "gyro z", 		\
@@ -36,11 +32,14 @@ varsToStream = [ 							\
 
 def fxCurrentControl(devId):
 	holdCurrent = 300 * (np.sin(2 * np.pi * 1 * ((0))))
+	sleep(0.4)
 	fxSetStreamVariables(devId, varsToStream)
+	sleep(0.4)
 	streamSuccess = fxStartStreaming(devId, 500, False, 0)
-
+	sleep(0.4)
 	print('Setting controller to current...')
 	setControlMode(devId, CTRL_CURRENT)
+	sleep(0.2)
 	setGains(devId, 100, 20, 0, 0)
 	
 
@@ -49,40 +48,41 @@ def fxCurrentControl(devId):
 	currentVec_des = np.array([])
 	currentVec_act = np.array([])
 
-	# track reads and nones
+	# Track reads and nones
 	validReads = 0
 	noneReads = 0
 
-	interval = 10*60 #seconds
-
+	# Setup timeing elements
 	# Perf counter accounts for sleeps and is system wide (See python doc)
+	interval =5*60#seconds
 	startTime = perf_counter()
 	lastCheck = startTime
 	currentTime = perf_counter()
 	time_step = 1/500; #seconds
 
-	print('Entering While loop')
-
-	while((currentTime - startTime) < interval):
-		#print("Holding Current: {} mA...".format(holdCurrent))
-		currentTime = perf_counter()
-		timeSec = currentTime - lastCheck
-		timeLapsed = currentTime - startTime
-		
-		if (timeSec) > time_step:
-			lastCheck = currentTime
-			deviceValue = (fxReadDevice(devId, [FX_ENC_ANG])[0])
-			if deviceValue is not None: 
-				validReads += 1
-				holdCurrent = 300 * (np.sin(2 * np.pi * 1 * ((timeLapsed))))
-				setMotorCurrent(devId, holdCurrent) # Start the current, holdCurrent is in mA 
-				currentVec_act = np.append(currentVec_act, deviceValue )
-				timeVec = np.append(timeVec, timeLapsed) 
-				currentVec_des = np.append(currentVec_des, holdCurrent)
-			else:
-				noneReads += 1
-				print("Data is not available")
-				holdCurrent = 0
+	try:
+		while((currentTime - startTime) < interval):
+			#print("Holding Current: {} mA...".format(holdCurrent))
+			currentTime = perf_counter()
+			timeSec = currentTime - lastCheck
+			timeLapsed = currentTime - startTime
+			
+			if (timeSec) > time_step:
+				lastCheck = currentTime
+				deviceValue = (fxReadDevice(devId, [FX_MOT_CURR])[0])
+				if deviceValue is not None: 
+					validReads += 1
+					holdCurrent = 300 * (np.sin(2 * np.pi * 1 * ((timeLapsed))))
+					setMotorCurrent(devId, holdCurrent) # Start the current, holdCurrent is in mA 
+					currentVec_act = np.append(currentVec_act, deviceValue )
+					timeVec = np.append(timeVec, timeLapsed) 
+					currentVec_des = np.append(currentVec_des, holdCurrent)
+				else:
+					noneReads += 1
+					# print("Data is not available")
+					holdCurrent = 0
+	except:
+		pass
 
 	print("Exiting Procedure\n")
 	print("Time: {}".format(currentTime - startTime))
@@ -96,14 +96,12 @@ def fxCurrentControl(devId):
 		sleep(0.04)
 
 	# wait for motor to spin down
-
 	setMotorCurrent(devId, 0)
-
 	setControlMode(devId, CTRL_NONE)
 	fxStopStreaming(devId)
 
 
-	
+	# Data processing
 	dataMatrix = np.vstack((currentVec_des ,currentVec_act))
 	#print(dataMatrix[0,:].shape)
 	#correlatedSignal = correlate(dataMatrix[0,:],dataMatrix[1,:])
