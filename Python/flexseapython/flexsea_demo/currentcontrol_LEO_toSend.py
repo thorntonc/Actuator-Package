@@ -3,7 +3,7 @@ from time import sleep
 from time import time, strftime,perf_counter, sleep
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import correlate
+#from scipy.signal import correlate
 
 sys.path.append(r"../..") # set the directory based on your computer  Use relative paths PLZ
 
