@@ -10,6 +10,7 @@ from flexseapython.flexsea_demo.opencontrol import fxOpenControl
 from flexseapython.flexsea_demo.currentcontrol import fxCurrentControl
 from flexseapython.flexsea_demo.positioncontrol import fxPositionControl
 from flexseapython.flexsea_demo.high_speed_test import fxHighSpeedTest
+from flexseapython.flexsea_demo.two_dev_high_speed_test import fxTwoDevHighSpeedTest
 from flexseapython.flexsea_demo.two_devices_positioncontrol import fxTwoDevicePositionControl
 from flexseapython.flexsea_demo.two_devices_leaderfollower import fxLeaderFollower
 from flexseapython.flexsea_demo.twopositioncontrol import fxTwoPositionControl
@@ -50,6 +51,7 @@ experiments =  [									\
 		(fxFindPoles,	"Find Poles"),			\
 		(fxUserRW, "User RW"), \
 		(fxTwoDevicePositionControl,	"Two Device Position Control"),	 \
+		(fxTwoDevHighSpeedTest, "Two Device High Speed Test"),	\
 		(fxLeaderFollower,	"Two Device Leader Follower Control"),
 ]
 
