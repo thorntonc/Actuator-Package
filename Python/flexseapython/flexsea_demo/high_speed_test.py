@@ -24,9 +24,9 @@ class signal(Enum):
 
 # Generate a sine wave of a specific amplitude and frequency
 def sinGenerator(amplitude, frequency, offset, commandFreq):
-	num_samples = commandFreq / frequency
-	in_array = np.linspace(-np.pi, np.pi, num_samples)
-	sin_vals = amplitude * np.sin(in_array) + offset
+	num_samples = round(commandFreq / frequency)
+	int_array = np.linspace(-np.pi, np.pi, num_samples)
+	sin_vals = amplitude * np.sin(int_array) + offset
 	return sin_vals
 
 # generate a line with specific amplitude
