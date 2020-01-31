@@ -3,6 +3,9 @@ from time import sleep, time, strftime
 from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('WebAgg')
+import traceback
 
 pardir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(pardir)
@@ -60,7 +63,7 @@ def lineGenerator(amplitude, commandFreq):
 # Cycle Delay: Delay between signals sent to controller, use with sine wave only
 # Request Jitter: Add jitter amount to every other sample sent to controller
 # Jitter: Amount of jitter
-def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signalType = signal.sine, commandFreq = 1000, signalAmplitude = 10000, numberOfLoops = 10, signalFreq = 1, cycleDelay = .1, requestJitter = False, jitter = 200):
+def fxHighSpeedTest(port, baudRate, controllerType = Controller.current, signalType = signal.sine, commandFreq = 1000, signalAmplitude = 1000, numberOfLoops = 10, signalFreq = 5, cycleDelay = .1, requestJitter = False, jitter = 200):
 	
 	streamFreq = 1000
 	shouldLog = True
@@ -92,6 +95,8 @@ def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signal
 		requests = []
 		measurements = []
 		times = []
+		currentCommandTimes = []
+		streamCommandTimes = []
 
 		cycleStopTimes = []
 		i = 0
@@ -122,8 +127,11 @@ def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signal
 				# set controller to the next sample
 				# read ActPack data
 				if (controllerType == Controller.current):
+					tCommandTime0 = time()
 					setMotorCurrent(stream.devId, sample)
+					tCommandTime1 = time()
 					data = stream([FX_MOT_CURR])
+					tStreamTime = time()
 
 				elif (controllerType == Controller.position):
 					setPosition(stream.devId, sample) 
@@ -134,6 +142,8 @@ def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signal
 				times.append(time() - t0)
 				requests.append(sample)
 				i = i + 1
+				currentCommandTimes.append(tCommandTime1 - tCommandTime0)
+				streamCommandTimes.append(tStreamTime - tCommandTime1)
 
 			# Delay between cycles (sine wave only)
 			if (signalType == signal.sine):
@@ -171,6 +181,7 @@ def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signal
 		command_frequency = i / elapsed_time
 		print("i: " + str(i) + ", elapsed_time: " + str(elapsed_time))
 
+		plt.figure(1)
 		if (controllerType == Controller.current):
 			title = "Current control with " + "{:.2f}".format(actual_frequency) + " Hz, " + \
 				str(signalAmplitude) + " mA amplitude " + signalTypeStr + " and " + "{:.2f}".format(command_frequency) + " Hz commands"
@@ -194,9 +205,20 @@ def fxHighSpeedTest(port, baudRate, controllerType = Controller.position, signal
 		# draw a vertical line at the end of each cycle
 		for endpoints in cycleStopTimes:
 			plt.axvline(x=endpoints)
+
+		plt.figure(2)
+		title = "Current and stream command times (aggregate)"
+		plt.title(title)
+		plt.plot(currentCommandTimes, color = 'b', label = 'Current Command Times')
+		plt.plot(streamCommandTimes, color = 'r', label = 'Stream Command Times')
+		plt.xlabel("Command sequence number")
+		plt.ylabel("Time (s)")
+		plt.legend(loc='upper right')
+
 		plt.show()
 
-
+	except Exception as e:
+		print(traceback.format_exc())
 	except:
 		# Run the cleanup no matter how you exit
 		setControlMode(stream.devId, CTRL_NONE)
